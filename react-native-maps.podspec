@@ -139,16 +139,10 @@ Pod::Spec.new do |s|
   # to the Google subspec above. See docs/installation.md for setup.
   s.subspec 'GoogleSPM' do |ss|
     ss.source_files = "ios/AirGoogleMaps/**/*.{h,m,mm,swift}"
-    # google-maps-ios-utils versions available via SPM (6.1.3+) rewrote
-    # Heatmap in Swift and dropped the ObjC GMUHeatmapTileLayer header this
-    # wrapper depends on. Excluded here until it's ported to the new API;
-    # the CocoaPods-based Google subspec (pinned to Utils 6.1.0) is
-    # unaffected and keeps Heatmap support.
-    ss.exclude_files = "ios/AirGoogleMaps/AIRGoogleMapHeatmap*.{h,m}"
     ss.resource_bundles = {
       'GoogleMapsPrivacy' => ['ios/AirGoogleMaps/Resources/GoogleMapsPrivacy.bundle']
     }
-    ss.compiler_flags = folly_compiler_flags + ' -DHAVE_GOOGLE_MAPS=1 -DHAVE_GOOGLE_MAPS_UTILS=1 -DHAVE_GOOGLE_MAPS_HEATMAP=0'
+    ss.compiler_flags = folly_compiler_flags + ' -DHAVE_GOOGLE_MAPS=1 -DHAVE_GOOGLE_MAPS_UTILS=1 -DHAVE_GOOGLE_MAPS_HEATMAP=1'
     ss.spm_dependency 'GoogleMaps/GoogleMaps'
     ss.spm_dependency 'GoogleMapsUtils/GoogleMapsUtils'
     ss.dependency 'react-native-maps/Generated'
@@ -168,6 +162,30 @@ Pod::Spec.new do |s|
           DEFINES_FILE="${DEFINES_DIR}/RNMapsDefines.h"
           mkdir -p "$DEFINES_DIR"
           echo "#define HAVE_GOOGLE_MAPS 1" > "$DEFINES_FILE"
+
+          # Same @import patch as the Google subspec above, for
+          # cocoapods-spm's checkout instead of the CocoaPods one.
+          echo "🔧 Patching @import GoogleMaps in SPM checkout..."
+          UTILS_INCLUDE_DIR="${PODS_ROOT}/../.spm.pods/packages/.umbrella/.build/checkouts/google-maps-ios-utils/Sources/GoogleMapsUtilsObjC/include"
+          FILES=(
+            "$UTILS_INCLUDE_DIR/GMSMarker+GMUClusteritem.h"
+            "$UTILS_INCLUDE_DIR/GMUGeoJSONParser.h"
+            "$UTILS_INCLUDE_DIR/GMUPolygon.h"
+            "$UTILS_INCLUDE_DIR/GMUWeightedLatLng.h"
+          )
+
+          for file in "${FILES[@]}"; do
+            if [ -f "$file" ]; then
+              if grep -q "@import GoogleMaps;" "$file"; then
+                sed -i '' 's/@import GoogleMaps;/#import <GoogleMaps\\/GoogleMaps.h>/' "$file"
+                echo "✅ Patched: $file"
+              else
+                echo "ℹ️ No @import in: $file"
+              fi
+            else
+              echo "⚠️ Not found: $file"
+            fi
+          done
         ),
         :execution_position => :before_compile
       }
