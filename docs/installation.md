@@ -113,6 +113,40 @@ The app's Info.plist file must contain a NSLocationWhenInUseUsageDescription wit
 
 That's it, you made it! 👍
 
+### Enabling Google Maps via Swift Package Manager (experimental)
+
+Google is phasing out CocoaPods releases of the Google Maps Platform iOS SDKs. As an alternative to the `Google` subspec above, `GoogleSPM` resolves GoogleMaps/Google-Maps-iOS-Utils via [Swift Package Manager](https://www.swift.org/documentation/package-manager/) instead, using the [`cocoapods-spm`](https://github.com/trinhngocthuyen/cocoapods-spm) plugin so integration stays automatic through a normal `pod install` - no manual Xcode "Package Dependencies" step required.
+
+Add the plugin to your `Gemfile`:
+
+```ruby
+gem 'cocoapods-spm'
+```
+
+Then in your `Podfile`, declare the two package sources and select `GoogleSPM` instead of `Google`:
+
+```ruby
+spm_pkg 'GoogleMaps', :url => 'https://github.com/googlemaps/ios-maps-sdk', :version => '10.15.0'
+spm_pkg 'GoogleMapsUtils', :url => 'https://github.com/googlemaps/google-maps-ios-utils', :version => '6.1.3'
+
+rn_maps_path = '../node_modules/react-native-maps'
+pod 'react-native-maps/GoogleSPM', :path => rn_maps_path
+```
+
+Because `react-native-maps` is autolinked, also exclude it from iOS autolinking in `react-native.config.js` so autolinking doesn't also add a conflicting `react-native-maps` pod declaration:
+
+```js
+module.exports = {
+  dependencies: {
+    'react-native-maps': {
+      platforms: {ios: null},
+    },
+  },
+};
+```
+
+**Known limitation:** the Heatmap component (`<Heatmap />`) is not available through the `GoogleSPM` subspec. The Google-Maps-iOS-Utils versions published via SPM (6.1.3+) rewrote Heatmap in Swift and dropped the Objective-C `GMUHeatmapTileLayer` API this wrapper's Heatmap component depends on. Apps that use `<Heatmap />` should stay on the `Google` subspec until Heatmap is ported to the new API.
+
 ---
 
 ## Android
