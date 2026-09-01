@@ -60,7 +60,9 @@ Pod::Spec.new do |s|
 
            mkdir -p "$DEFINES_DIR"
 
-           if [ -d "$PODS_ROOT/GoogleMaps" ] && [ -d "$PODS_ROOT/Google-Maps-iOS-Utils" ]; then
+           # Also detect the GoogleSPM checkout, or its own script phase
+           # forcing this define can race with this one and flip it back.
+           if ([ -d "$PODS_ROOT/GoogleMaps" ] && [ -d "$PODS_ROOT/Google-Maps-iOS-Utils" ]) || [ -d "$PODS_ROOT/../.spm.pods/packages/.umbrella/.build/checkouts/ios-maps-sdk" ]; then
              echo "#define HAVE_GOOGLE_MAPS 1" > "$DEFINES_FILE"
              echo "✅ Google Maps libraries detected. HAVE_GOOGLE_MAPS defined."
            else
