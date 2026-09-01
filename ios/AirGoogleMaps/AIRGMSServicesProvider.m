@@ -9,3 +9,8 @@
 }
 
 @end
+
+void RNMapsProvideGoogleMapsAPIKey(const char *apiKey)
+{
+  [AIRGMSServicesProvider provideAPIKey:[NSString stringWithUTF8String:apiKey]];
+}
