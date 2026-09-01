@@ -153,6 +153,19 @@ pod 'react-native-maps/GoogleSPM', :path => rn_maps_path
 +[AIRGMSServicesProvider provideAPIKey:@"_YOUR_API_KEY_"];
 ```
 
+If your `AppDelegate` is Swift, `import ReactNativeMaps` (even just from a bridging header) makes Swift build a full Clang module for it, which transitively pulls in React's C++-heavy Fabric/JSI headers and can fail depending on your project's settings. Forward-declare the plain C entry point in your bridging header instead, and call that:
+
+```c
+// YourApp-Bridging-Header.h
+extern void RNMapsProvideGoogleMapsAPIKey(const char *_Nonnull apiKey);
+```
+
+```swift
+RNMapsProvideGoogleMapsAPIKey(apiKey)
+```
+
+**Trying it out:** the `example/` app in this repo can be built against `GoogleSPM` by setting `USE_GOOGLE_SPM=1` before `pod install` (its `AppDelegate.swift` and `Podfile` already branch on this), without disturbing its default `Google` configuration.
+
 ---
 
 ## Android
