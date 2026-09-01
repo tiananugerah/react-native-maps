@@ -133,6 +133,45 @@ Pod::Spec.new do |s|
     install_modules_dependencies(ss)
   end
 
+  # Google Maps via Swift Package Manager (cocoapods-spm), as an alternative
+  # to the Google subspec above. See docs/installation.md for setup.
+  s.subspec 'GoogleSPM' do |ss|
+    ss.source_files = "ios/AirGoogleMaps/**/*.{h,m,mm,swift}"
+    # google-maps-ios-utils versions available via SPM (6.1.3+) rewrote
+    # Heatmap in Swift and dropped the ObjC GMUHeatmapTileLayer header this
+    # wrapper depends on. Excluded here until it's ported to the new API;
+    # the CocoaPods-based Google subspec (pinned to Utils 6.1.0) is
+    # unaffected and keeps Heatmap support.
+    ss.exclude_files = "ios/AirGoogleMaps/AIRGoogleMapHeatmap*.{h,m}"
+    ss.resource_bundles = {
+      'GoogleMapsPrivacy' => ['ios/AirGoogleMaps/Resources/GoogleMapsPrivacy.bundle']
+    }
+    ss.compiler_flags = folly_compiler_flags + ' -DHAVE_GOOGLE_MAPS=1 -DHAVE_GOOGLE_MAPS_UTILS=1 -DHAVE_GOOGLE_MAPS_HEATMAP=0'
+    ss.spm_dependency 'GoogleMaps/GoogleMaps'
+    ss.spm_dependency 'GoogleMapsUtils/GoogleMapsUtils'
+    ss.dependency 'react-native-maps/Generated'
+    ss.dependency 'react-native-maps/Maps'
+    install_modules_dependencies(ss)
+    # cocoapods-spm's checkout path, unlike Xcode's own DerivedData one, is
+    # stable across machines and always exists by the time this builds.
+    ss.pod_target_xcconfig = {
+      'HEADER_SEARCH_PATHS' => '"$(PODS_ROOT)/../.spm.pods/packages/.umbrella/.build/checkouts/google-maps-ios-utils/Sources/GoogleMapsUtilsObjC/include"'
+    }
+    ss.script_phases = [
+      {
+        :name => 'react-native-maps patches (SPM)',
+        :script => %(
+          set -e
+          DEFINES_DIR="${PODS_TARGET_SRCROOT}/ios/AirMaps"
+          DEFINES_FILE="${DEFINES_DIR}/RNMapsDefines.h"
+          mkdir -p "$DEFINES_DIR"
+          echo "#define HAVE_GOOGLE_MAPS 1" > "$DEFINES_FILE"
+        ),
+        :execution_position => :before_compile
+      }
+    ]
+  end
+
   # By default, use the Maps subspec
   s.default_subspec = 'Maps'
 
